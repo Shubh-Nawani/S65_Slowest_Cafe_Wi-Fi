@@ -1,0 +1,11 @@
+{
+  "name": "new-folder",
+  "version": "1.0.0",
+  "description": "1. **User Authentication:**  \r    - Allow users to sign up and log in to submit and view data.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
