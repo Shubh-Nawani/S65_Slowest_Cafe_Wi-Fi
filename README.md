@@ -1,4 +1,4 @@
-
+# Deployment Link: https://s65-slowest-cafe-wi-fi.onrender.com/ping
 
 ### **Project Title:**  
 # List of the Slowest Internet Speeds by Coffee Shops  
