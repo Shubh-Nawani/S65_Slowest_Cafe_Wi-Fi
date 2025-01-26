@@ -55,3 +55,4 @@ This project was chosen because itâ€™s a humorous take on a common frustrationâ€
 3. Frontend development with dynamic components for displaying user data.  
 4. Secure user authentication and session management.  
 
+EOD
