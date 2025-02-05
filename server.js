@@ -7,22 +7,17 @@ require('dotenv').config()
 app.use(express.json())
 
 
-
 app.use("/api/users", userRoute)
 
 app.get('/', (req, res) => {
   try {
     return res.status(200).send("Backend is running...")
   } catch (err) {
-    return res.status(500).send("Internal Server Error")
+    return res.status(500).send(err.message)
   }
 })
 
 
-
-// app.use((req, res, next) => {
-//   res.status(404).send('Sorry, we could not find that!');
-// });
 
 const PORT = process.env.PORT || 4000
 
