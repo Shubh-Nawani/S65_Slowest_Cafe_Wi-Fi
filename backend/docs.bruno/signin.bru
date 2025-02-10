@@ -6,6 +6,13 @@ meta {
 
 post {
   url: http://localhost:8000/api/users/signin
-  body: none
+  body: json
   auth: none
+}
+
+body:json {
+  {
+    "email":"shubhnawani@outlook.com",
+    "password":"123456"
+  }
 }

@@ -6,6 +6,13 @@ meta {
 
 delete {
   url: http://localhost:8000/api/users/user
-  body: none
+  body: json
   auth: none
+}
+
+body:json {
+  {
+    "email":"shubhnawani@outlook.com",
+    "password":"123456"
+  }
 }
