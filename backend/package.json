@@ -4,7 +4,7 @@
   "description": "1. **User Authentication:**  \r    - Allow users to sign up and log in to submit and view data.",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon server.js"
   },
   "author": "",
   "license": "ISC",
