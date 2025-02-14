@@ -4,21 +4,6 @@ import { Wifi, Coffee, Clock, Users, MessageSquare, Snail } from 'lucide-react';
 function App() {
   return (
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     <div className="min-h-screen bg-[#FDF8F3]">
       {/* Hero Section */}
       <div 
@@ -67,17 +52,21 @@ function App() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-[#2A2922] text-white py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Slow Down?</h2>
-          <p className="text-lg mb-8">Join us for the world's most relaxing internet experience</p>
-          <button className="bg-[#D4A373] hover:bg-[#C29365] text-white font-bold py-3 px-8 rounded-full transition duration-300">
-            Find Our Location
-          </button>
+        <div className="bg-[#2A2922] text-white py-16 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Slow Down?</h2>
+            <p className="text-lg mb-8">Join us for the world's most relaxing internet experience</p>
+            <button 
+          className="bg-[#D4A373] hover:bg-[#C29365] text-white font-bold py-3 px-8 rounded-full transition duration-300"
+          onClick={fetchFakeShops}
+            >
+          Find Our Location
+            </button>
+            <div id="shop-list" className="mt-8"></div>
+          </div>
         </div>
-      </div>
 
-      {/* Footer */}
+        {/* Footer */}
       <footer className="bg-[#1A1A1A] text-white/70 py-8 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <p>© 2025 The Slowest Café WiFi. Loading times may vary.</p>
@@ -86,6 +75,45 @@ function App() {
       </footer>
     </div>
   );
+}
+
+function fetchFakeShops() {
+  const fakeShops = [
+    {
+      name: "Slow Brew Café",
+      address: "123 Slow Lane",
+      contact: "123-456-7890"
+    },
+    {
+      name: "Leisure Latte Lounge",
+      address: "456 Leisure Blvd",
+      contact: "987-654-3210"
+    },
+    {
+      name: "Tranquil Tea House",
+      address: "789 Tranquil St",
+      contact: "555-555-5555"
+    },
+    {
+      name: "Relaxed Roast",
+      address: "101 Relaxed Ave",
+      contact: "111-222-3333"
+    },
+    {
+      name: "Calm Coffee Corner",
+      address: "202 Calm Rd",
+      contact: "444-666-8888"
+    }
+  ];
+
+  const shopListDiv = document.getElementById('shop-list');
+  shopListDiv.innerHTML = fakeShops.map(shop => `
+    <div class="bg-white p-6 rounded-lg shadow-md mb-4">
+      <h3 class="text-xl font-bold mb-2 text-gray-800">${shop.name}</h3>
+      <p class="text-gray-600">Address: ${shop.address}</p>
+      <p class="text-gray-600">Contact: ${shop.contact}</p>
+    </div>
+  `).join('');
 }
 
 function FeatureCard({ icon, title, description }) {
