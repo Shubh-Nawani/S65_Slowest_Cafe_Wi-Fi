@@ -1,26 +1,114 @@
 import React, { useState } from 'react';
 import { Wifi, Coffee, Clock, Users, Snail } from 'lucide-react';
 import axios from 'axios';
+import { BrowserRouter as Router, Route, Routes, Link, useNavigate } from 'react-router-dom';
 
+// Feature Card Component
+function FeatureCard({ icon, title, description }) {
+  return (
+    <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition duration-300">
+      <div className="w-12 h-12 bg-[#D4A373] rounded-full flex items-center justify-center mb-6">
+        <div className="text-white">{icon}</div>
+      </div>
+      <h3 className="text-xl font-bold mb-3 text-gray-800">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+// Add Shop Component
+function AddShop() {
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [contact, setContact] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await axios.post('http://localhost:8000/api/addshops', {
+        name,
+        address,
+        contact
+      });
+      
+      alert('Shop added successfully!');
+      navigate('/');
+    } catch (error) {
+      console.error('Error adding shop:', error);
+      alert('Failed to add shop. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md w-96">
+        <h2 className="text-2xl font-bold mb-4">Add a Coffee Shop</h2>
+        <label className="block mb-2">Name</label>
+        <input 
+          type="text" 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          className="w-full p-2 border rounded mb-4" 
+          required 
+        />
+        <label className="block mb-2">Address</label>
+        <input 
+          type="text" 
+          value={address} 
+          onChange={(e) => setAddress(e.target.value)} 
+          className="w-full p-2 border rounded mb-4" 
+          required 
+        />
+        <label className="block mb-2">Contact</label>
+        <input 
+          type="text" 
+          value={contact} 
+          onChange={(e) => setContact(e.target.value)} 
+          className="w-full p-2 border rounded mb-4" 
+          required 
+        />
+        <button 
+          type="submit" 
+          className={`w-full ${
+            isSubmitting 
+              ? 'bg-gray-400' 
+              : 'bg-green-500 hover:bg-green-700'
+          } text-white font-bold py-2 px-4 rounded transition-colors`}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// Main App Component
 function App() {
   const [fakeShops, setFakeShops] = useState([]);
   const [showShops, setShowShops] = useState(false);
 
-  const fetchFakeShops = () => {
+  const fetchFakeShops = async () => {
     if (fakeShops.length === 0) {
-      axios.get('http://localhost:8000/api/shops') // Ensure this matches your backend route
-        .then(response => {
-          setFakeShops(response.data);
-        })
-        .catch(error => {
-          console.error('Error fetching fake shops:', error);
-        });
+      try {
+        const response = await axios.get('http://localhost:8000/api/shops');
+        setFakeShops(response.data);
+      } catch (error) {
+        console.error('Error fetching fake shops:', error);
+        alert('Failed to fetch shops. Please try again.');
+      }
     }
     setShowShops(prev => !prev);
   };
 
-  return (
-    <div className="min-h-screen bg-[#FDF8F3]">
+  const HomePage = () => (
+    <>
       {/* Hero Section */}
       <div 
         className="h-screen bg-cover bg-center relative"
@@ -41,6 +129,9 @@ function App() {
               <div className="w-1 h-full bg-white rounded-full animate-pulse" />
             </div>
           </div>
+          <Link to="/add-shop" className="mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition duration-300">
+            Add Shop
+          </Link>
         </div>
       </div>
 
@@ -74,7 +165,6 @@ function App() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Slow Down?</h2>
           <p className="text-lg mb-8">Join us for the world's most relaxing internet experience</p>
           
-          {/* Toggle Button */}
           <button 
             className="bg-[#D4A373] hover:bg-[#C29365] text-white font-bold py-3 px-8 rounded-full transition duration-300"
             onClick={fetchFakeShops}
@@ -82,7 +172,6 @@ function App() {
             {showShops ? "Hide Shops" : "Find Our Locations"}
           </button>
 
-          {/* Display Fake Shops */}
           {showShops && (
             <div className="mt-8">
               {fakeShops.length > 0 ? (
@@ -108,21 +197,18 @@ function App() {
           <p className="text-sm mt-2">Our WiFi is powered by a hamster on a wheel (we feed him well)</p>
         </div>
       </footer>
-    </div>
+    </>
   );
-}
 
-function FeatureCard({ icon, title, description }) {
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition duration-300">
-      <div className="w-12 h-12 bg-[#D4A373] rounded-full flex items-center justify-center mb-6">
-        <div className="text-white">
-          {icon}
-        </div>
+    <Router>
+      <div className="min-h-screen bg-[#FDF8F3]">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/add-shop" element={<AddShop />} />
+        </Routes>
       </div>
-      <h3 className="text-xl font-bold mb-3 text-gray-800">{title}</h3>
-      <p className="text-gray-600">{description}</p>
-    </div>
+    </Router>
   );
 }
 
