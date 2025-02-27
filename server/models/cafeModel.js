@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const cafeSchema = new mongoose.Schema({
     name: {
@@ -12,7 +12,9 @@ const cafeSchema = new mongoose.Schema({
     contact: {
         type: Number,
         required: true
-    }
-})
+    },
+},{
+    timestamps: true
+});
 
-module.exports = mongoose.model("Cafe", cafeSchema)
+module.exports = mongoose.model("Cafe", cafeSchema);

@@ -26,4 +26,4 @@ const fakeShops = [
     }
   ];
 
-module.exports = fakeShops
+

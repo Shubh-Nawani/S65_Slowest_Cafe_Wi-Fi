@@ -34,7 +34,7 @@
 ### **Tech Stack:**  
 #### Frontend:  
 - **React** with **Vite** for building the UI.  
-- **CSS** or **TailwindCSS** for styling.  
+- **TailwindCSS** for styling.  
 
 #### Backend:  
 - **Node.js** with **Express.js** for server-side logic and APIs.  
@@ -42,8 +42,8 @@
 
 #### Tools and Integrations:  
 - **Speedtest API** (or a similar tool) to capture real-time internet speed data.  
-- **Bruno** for API testing.  
-- **Firebase Auth** (optional) for user authentication.  
+- **Postman** for API testing.  
+- **OAuth** (optional) for user authentication.  
 - **Docker** (optional) for containerized deployment.  
 
 
