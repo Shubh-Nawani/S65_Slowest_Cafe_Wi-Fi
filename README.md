@@ -1,6 +1,6 @@
 # Deployment Links: 
-## Backend: https://s65-slowest-cafe-wi-fi.onrender.com/ping
-## Frontend: https://s65-slowest-cafe-wi-fi-oi6e.vercel.app/
+## Backend: https://s65-slowest-cafe-wi-fi-izxi.onrender.com/
+## Frontend: https://s65-slowest-cafe-wi-fi.vercel.app/
 
 ### **Project Title:**  
 # List of the Slowest Internet Speeds by Coffee Shops  

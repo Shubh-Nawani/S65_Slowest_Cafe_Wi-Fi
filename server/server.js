@@ -6,13 +6,13 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 
 const app = express();
-
 dotenv.config();
+const PORT = process.env.PORT || 4000;
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN, 
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', 
-  credentials: true, 
+  origin: [process.env.CORS_ORIGIN, "http://localhost:5173"].filter(Boolean),
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
@@ -29,7 +29,7 @@ app.get("/", (req, res) => {
   }
 })
 
-const PORT = process.env.PORT || 4000;
+
 
 app.listen(PORT, async() => {
   try {
