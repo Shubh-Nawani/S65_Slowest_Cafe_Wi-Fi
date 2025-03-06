@@ -1,12 +1,11 @@
 const express = require('express');
-const Cafe = require('../models/cafeModel');
-const {getCafe, addCafe, updateCafe, deleteCafe} = require('../controllers/cafeController');
+const { getCafe, addCafe, updateCafe, deleteCafe, validateCafe, validateCafeId } = require('../controllers/cafeController');
 
 const router = express.Router();
 
-router.get('/cafe', getCafe);
-router.post('/cafe', addCafe);
-router.put('/cafe', updateCafe);
-router.delete('/cafe', deleteCafe)
+router.get('/cafes', getCafe);
+router.post('/cafes', validateCafe, addCafe);
+router.put('/cafes', [...validateCafe, ...validateCafeId], updateCafe);
+router.delete('/cafes', validateCafeId, deleteCafe);
 
 module.exports = router;

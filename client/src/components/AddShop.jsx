@@ -14,7 +14,7 @@ function AddShop() {
     setIsSubmitting(true);
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URI}/api/cafe`, {
+      await axios.post(`${import.meta.env.VITE_BASE_URI}/api/cafes`, {
         name,
         address,
         contact

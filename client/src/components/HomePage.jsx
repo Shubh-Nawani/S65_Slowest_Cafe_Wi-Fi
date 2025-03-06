@@ -14,7 +14,7 @@ function HomePage() {
   // Fetch Shops
   const fetchFakeShops = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URI}/api/cafe`);
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URI}/api/cafes`);
       setFakeShops(response.data);
       setShowShops(true);
     } catch (error) {
@@ -26,7 +26,7 @@ function HomePage() {
   // Handle Update Function
   const updateCafe = async () => {
     try {
-      await axios.put(`${import.meta.env.VITE_BASE_URI}/api/cafe`, { _id: editShop._id, ...updatedData });
+      await axios.put(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { _id: editShop._id, ...updatedData });
       alert('Cafe updated successfully!');
       setEditShop(null); // Close the modal
       fetchFakeShops();  // Refresh the shop list
@@ -39,7 +39,7 @@ function HomePage() {
   // Delete Shop Function
   const deleteCafe = async (id) => {
     try {
-      await axios.delete(`${import.meta.env.VITE_BASE_URI}/api/cafe`, { data: { _id: id } });
+      await axios.delete(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { data: { _id: id } });
       alert('Cafe deleted successfully!');
       setFakeShops(fakeShops.filter(shop => shop._id !== id));
     } catch (error) {
