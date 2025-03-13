@@ -57,11 +57,6 @@ function AuthForm() {
     }
 
     if (isSignup) {
-      if (!formData.username) {
-        setError("Username is required");
-        return false;
-      }
-      
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords don't match");
         return false;
@@ -84,7 +79,7 @@ function AuthForm() {
 
     // Prepare data for API based on form type
     const apiData = isSignup 
-      ? { username: formData.username, email: formData.email, password: formData.password }
+      ? { email: formData.email, password: formData.password }
       : { email: formData.email, password: formData.password };
 
     try {
@@ -107,10 +102,6 @@ function AuthForm() {
       // Handle successful response
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userEmail', formData.email);
-      
-      if (isSignup && formData.username) {
-        localStorage.setItem('username', formData.username);
-      }
       
       // Store user data if available from response
       if (response.data && response.data.user) {
@@ -219,20 +210,6 @@ function AuthForm() {
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignup && (
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">Username</label>
-                  <input 
-                    type="text" 
-                    name="username"
-                    value={formData.username} 
-                    onChange={handleChange} 
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                    placeholder="Your username"
-                  />
-                </div>
-              )}
-              
               <div>
                 <label className="block text-gray-700 font-medium mb-2">Email</label>
                 <input 
