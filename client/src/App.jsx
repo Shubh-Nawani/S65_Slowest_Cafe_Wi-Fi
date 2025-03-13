@@ -5,6 +5,7 @@ import HomePage from './components/HomePage';
 import AddShop from './components/AddShop';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
+import SpeedTestChart from './components/SpeedTestChart';
 
 // ProtectedRoute component for user authentication
 const ProtectedRoute = ({ children }) => {
@@ -41,6 +42,8 @@ function App() {
           <Route path="/home" element={
             <ProtectedRoute>
               <HomePage />
+              <SpeedTestChart />
+
             </ProtectedRoute>
           } />
           
