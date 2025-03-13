@@ -1,6 +1,6 @@
 const { check, validationResult } = require('express-validator');
 const User = require('../models/userModel');
-const bcrypt = require('bcrypt');
+// const bcrypt = require('bcrypt');
 
 // Get all users
 const getUsers = async (req, res) => {
@@ -30,12 +30,12 @@ const signup = async (req, res) => {
         }
 
         // Hash password
-        const hash = bcrypt.hashSync(password, 10);
+        // const hash = bcrypt.hashSync(password, 10);
 
         // Create new user
         const newUser = new User({
             email,
-            password: hash
+            password
         });
 
         await newUser.save();
@@ -64,10 +64,10 @@ const login = async (req, res) => {
         }
 
         // Compare password
-        const isMatch = await bcrypt.compare(password, existingUser.password);
-        if (!isMatch) {
-            return res.status(400).json({ error: "Invalid credentials!" });
-        }
+        // const isMatch = await bcrypt.compare(password, existingUser.password);
+        // if (!isMatch) {
+        //     return res.status(400).json({ error: "Invalid credentials!" });
+        // }
 
         return res.status(200).json({ message: "Login successful!" });
 

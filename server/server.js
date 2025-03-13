@@ -45,23 +45,24 @@ app.get("/", (req, res) => {
 
 const FastSpeedtest = require("fast-speedtest-api");
  
-let speedtest = new FastSpeedtest({
-    token: process.env.SPEEDTEST_TOKEN, // required
-    verbose: true, // default: false
-    timeout: 5000, // default: 5000
-    https: true, // default: true
-    urlCount: 5, // default: 5
-    bufferSize: 8, // default: 8
-    unit: FastSpeedtest.UNITS.Mbps // default: Bps
-});
- 
-speedtest.getSpeed().then(s => {
-    console.log(`Speed: ${s} Mbps`);
-}).catch(e => {
-    console.error(e.message);
-});
+app.get("/api/speedtest", async (req, res) => {
+  try {
+    let speedtest = new FastSpeedtest({
+      token: process.env.SPEEDTEST_TOKEN, // required
+      verbose: true,
+      timeout: 5000,
+      https: true,
+      urlCount: 5,
+      bufferSize: 8,
+      unit: FastSpeedtest.UNITS.Mbps
+    });
 
-
+    const speed = await speedtest.getSpeed();
+    return res.json({ speed: speed.toFixed(2) }); // Return speed in Mbps
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(PORT, async() => {
   try {
