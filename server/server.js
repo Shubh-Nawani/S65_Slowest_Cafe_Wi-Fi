@@ -9,8 +9,22 @@ const app = express();
 dotenv.config();
 const PORT = process.env.PORT || 4000;
 
+const allowedOrigins = [
+  process.env.CORS_ORIGIN1,
+  process.env.CORS_ORIGIN2,
+  "http://localhost:5173"
+];
+
+// CORS options
 const corsOptions = {
-  origin: [process.env.CORS_ORIGIN, "http://localhost:5173"].filter(Boolean),
+  origin: (origin, callback) => {
+    // Check if the origin is in the allowed origins list
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
 };
@@ -28,6 +42,24 @@ app.get("/", (req, res) => {
     return res.status(500).json({error: err.message});
   }
 })
+
+const FastSpeedtest = require("fast-speedtest-api");
+ 
+let speedtest = new FastSpeedtest({
+    token: process.env.SPEEDTEST_TOKEN, // required
+    verbose: true, // default: false
+    timeout: 5000, // default: 5000
+    https: true, // default: true
+    urlCount: 5, // default: 5
+    bufferSize: 8, // default: 8
+    unit: FastSpeedtest.UNITS.Mbps // default: Bps
+});
+ 
+speedtest.getSpeed().then(s => {
+    console.log(`Speed: ${s} Mbps`);
+}).catch(e => {
+    console.error(e.message);
+});
 
 
 
