@@ -9,22 +9,8 @@ const app = express();
 dotenv.config();
 const PORT = process.env.PORT || 4000;
 
-const allowedOrigins = [
-  process.env.CORS_ORIGIN1,
-  process.env.CORS_ORIGIN2,
-  "http://localhost:5173"
-];
-
-// CORS options
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Check if the origin is in the allowed origins list
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: [process.env.CORS_ORIGIN, "http://localhost:5173"].filter(Boolean),
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
 };
@@ -45,24 +31,23 @@ app.get("/", (req, res) => {
 
 const FastSpeedtest = require("fast-speedtest-api");
  
-app.get("/api/speedtest", async (req, res) => {
-  try {
-    let speedtest = new FastSpeedtest({
-      token: process.env.SPEEDTEST_TOKEN, // required
-      verbose: true,
-      timeout: 5000,
-      https: true,
-      urlCount: 5,
-      bufferSize: 8,
-      unit: FastSpeedtest.UNITS.Mbps
-    });
-
-    const speed = await speedtest.getSpeed();
-    return res.json({ speed: speed.toFixed(2) }); // Return speed in Mbps
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+let speedtest = new FastSpeedtest({
+    token: process.env.SPEEDTEST_TOKEN, // required
+    verbose: true, // default: false
+    timeout: 10000, // default: 5000
+    https: true, // default: true
+    urlCount: 5, // default: 5
+    bufferSize: 8, // default: 8
+    unit: FastSpeedtest.UNITS.Mbps // default: Bps
 });
+ 
+speedtest.getSpeed().then(s => {
+    console.log(`Speed: ${s} Mbps`);
+}).catch(e => {
+    console.error(e.message);
+});
+
+
 
 app.listen(PORT, async() => {
   try {
