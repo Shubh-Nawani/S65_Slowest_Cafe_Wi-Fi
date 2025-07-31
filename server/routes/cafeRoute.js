@@ -1,11 +1,29 @@
 const express = require('express');
-const { getCafe, addCafe, updateCafe, deleteCafe, validateCafe, validateCafeId } = require('../controllers/cafeController');
+const { 
+    getCafe, 
+    getCafeById,
+    getCafeStats,
+    addCafe, 
+    updateCafe, 
+    deleteCafe,
+    bulkDeleteCafes,
+    validateCafe, 
+    validateCafeId,
+    validateBulkDelete
+} = require('../controllers/cafeController');
+const { optionalAuth, verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/cafes', getCafe);
-router.post('/cafes', validateCafe, addCafe);
-router.put('/cafes', [...validateCafe, ...validateCafeId], updateCafe);
-router.delete('/cafes', validateCafeId, deleteCafe);
+// Public routes
+router.get('/cafes', optionalAuth, getCafe);
+router.get('/cafes/stats', getCafeStats);
+router.get('/cafes/:id', getCafeById);
+
+// Protected routes (require authentication)
+router.post('/cafes', verifyToken, validateCafe, addCafe);
+router.put('/cafes', verifyToken, [...validateCafe, ...validateCafeId], updateCafe);
+router.delete('/cafes', verifyToken, validateCafeId, deleteCafe);
+router.delete('/cafes/bulk', verifyToken, validateBulkDelete, bulkDeleteCafes);
 
 module.exports = router;

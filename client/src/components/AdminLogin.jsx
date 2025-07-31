@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import BackgroundImage from '../assets/bg.jpg';
-import { Shield, Key } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Shield, Key, ArrowLeft, Coffee, AlertCircle } from 'lucide-react';
+import axios from "axios";
+import { useNotification } from '../contexts/NotificationContext';
+import { Button, Input, Card } from './ui';
+import { animations } from '../utils/designSystem';
+import BackgroundImage from '../assets/bg.jpg';
 
 function AdminLogin() {
   const [adminKey, setAdminKey] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [showDemo, setShowDemo] = useState(false);
   const navigate = useNavigate();
+  const { success, error: showError, info } = useNotification();
 
   // Check if admin is already logged in
   useEffect(() => {
@@ -21,130 +25,187 @@ function AdminLogin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
     
     if (!adminKey.trim()) {
-      setError("Admin key is required");
+      showError("Admin key is required", "Validation Error");
       return;
     }
     
     setIsSubmitting(true);
 
     try {
-      // For demo purposes, allow a hardcoded admin key - REMOVE IN PRODUCTION
-      if (adminKey === "admin123") { // This is just for demonstration!
+      // Demo mode for development
+      if (adminKey === "admin123") {
         localStorage.setItem('isAdminAuthenticated', 'true');
         localStorage.setItem('adminName', 'Demo Admin');
         localStorage.setItem('adminToken', 'demo-token-123');
         localStorage.setItem('adminTimestamp', Date.now().toString());
         
+        success("Admin access granted! Welcome to the dashboard.", "Authentication Successful");
         navigate("/admin-dashboard", { replace: true });
         return;
       }
       
-      // Verify admin key against your backend
+      // Verify admin key against backend
       const response = await axios.post(`${import.meta.env.VITE_BASE_URI}/api/admin/verify`, 
         { adminKey }, 
         { withCredentials: true }
       );
       
-      // If verification is successful
       if (response.data.isAdmin) {
         localStorage.setItem('isAdminAuthenticated', 'true');
         localStorage.setItem('adminName', response.data.adminName || 'Admin');
         localStorage.setItem('adminToken', response.data.token);
         localStorage.setItem('adminTimestamp', Date.now().toString());
         
+        success("Admin access granted! Welcome to the dashboard.", "Authentication Successful");
         navigate("/admin-dashboard", { replace: true });
       } else {
-        setError("Invalid admin key");
+        showError("Invalid admin key provided", "Authentication Failed");
       }
     } catch (err) {
       console.error("Admin auth error:", err);
-      setError(err.response?.data?.message || "Authentication failed. Invalid admin key.");
+      showError(
+        err.response?.data?.message || "Authentication failed. Please check your admin key.",
+        "Authentication Error"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div 
-      className="fixed inset-0 flex items-center justify-center bg-cover bg-center" 
-      style={{ backgroundImage: `url(${BackgroundImage})` }}
-    > 
-      <div className="absolute inset-0 bg-black bg-opacity-70"></div>
+    <div className="min-h-screen bg-gradient-to-br from-coffee-50 via-orange-50 to-amber-50">
+      {/* Background Image Overlay */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-10"
+        style={{ backgroundImage: `url(${BackgroundImage})` }}
+      />
       
-      <div className="z-10 bg-white p-8 rounded-lg shadow-lg w-96 max-w-full">
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mb-3">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          
-          <h1 className="text-2xl font-bold text-center">Admin Access</h1>
-          <p className="text-gray-600 text-center">Slowest Café WiFi Management</p>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Admin Key</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Key className="h-5 w-5 text-gray-400" />
-              </div>
-              <input 
-                type="password" 
-                value={adminKey} 
-                onChange={(e) => setAdminKey(e.target.value)} 
-                className="w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" 
-                placeholder="Enter admin secret key"
-                required
-              />
+      {/* Header */}
+      <div className="relative z-10 bg-white/80 backdrop-blur-sm shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Button
+              onClick={() => navigate('/login')}
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              <Coffee className="w-6 h-6 text-coffee-600" />
+              <span className="font-semibold text-gray-900">Admin Access</span>
             </div>
           </div>
-          
-          <AnimatePresence mode="wait">
-            {error && (
-              <motion.div 
-                className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+        <motion.div
+          className="w-full max-w-md"
+          initial="hidden"
+          animate="visible"
+          variants={animations.slideUp}
+        >
+          <Card className="p-8 bg-white/95 backdrop-blur-sm shadow-xl">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <motion.div
+                className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full mb-4"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                <p>{error}</p>
+                <Shield className="w-8 h-8 text-white" />
               </motion.div>
-            )}
-          </AnimatePresence>
-          
-          <button 
-            type="submit" 
-            className={`w-full ${isSubmitting ? 'bg-gray-400' : 'bg-purple-600 hover:bg-purple-700'} text-white font-bold py-3 px-4 rounded-lg transition-colors`}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Authenticating...
+              
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Administrator Access
+              </h1>
+              <p className="text-gray-600">
+                Slowest Café WiFi Management Portal
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <Input
+                label="Admin Secret Key"
+                type="password"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                icon={Key}
+                placeholder="Enter your admin secret key"
+                autoComplete="current-password"
+                required
+              />
+
+              {/* Demo Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-700">
+                    <p className="font-medium mb-1">Demo Mode Available</p>
+                    <p className="text-xs mb-2">
+                      For testing purposes, you can use the demo admin key below:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="bg-blue-100 px-2 py-1 rounded text-xs font-mono">
+                        admin123
+                      </code>
+                      <Button
+                        type="button"
+                        onClick={() => setAdminKey('admin123')}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-6 px-2"
+                      >
+                        Use Demo Key
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ) : "Access Admin Panel"}
-          </button>
-          
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Not an admin?{" "}
-              <button 
-                type="button"
-                onClick={() => navigate('/login')} 
-                className="text-purple-600 hover:underline font-medium"
+
+              <Button
+                type="submit"
+                variant="purple"
+                size="lg"
+                loading={isSubmitting}
+                disabled={isSubmitting}
+                className="w-full"
               >
-                Return to Login
-              </button>
-            </p>
-          </div>
-        </form>
+                {isSubmitting ? 'Authenticating...' : 'Access Admin Panel'}
+              </Button>
+            </form>
+
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Not an administrator?{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="text-purple-600 hover:text-purple-700 font-medium hover:underline transition-colors"
+                >
+                  Return to User Login
+                </button>
+              </p>
+            </div>
+
+            {/* Security Notice */}
+            <div className="mt-6 p-3 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+                <Shield className="w-3 h-3" />
+                Secure admin authentication powered by Slowest Café WiFi
+              </p>
+            </div>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );

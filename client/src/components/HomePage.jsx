@@ -1,19 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wifi, Coffee, Clock, Users, Snail, LogOut, Shield, ExternalLink } from 'lucide-react';
-import BackgroundImage from '../assets/bg.jpg';
-import FeatureCard from './FeatureCard';
-import axios from 'axios';
+import { 
+  Wifi, Coffee, Clock, Users, LogOut, Shield, ExternalLink, 
+  Plus, Edit, Trash2, MapPin, Phone, Search, Filter, 
+  BarChart3, TrendingUp, Globe, Star
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
+import { useNotification } from '../contexts/NotificationContext';
+import { Button, Input, Card, Modal } from './ui';
+import { colors, animations } from '../utils/designSystem';
+import FeatureCard from './FeatureCard';
+import BackgroundImage from '../assets/bg.jpg';
 
 function HomePage() {
-  const [fakeShops, setFakeShops] = useState([]);
-  const [showShops, setShowShops] = useState(false);
-  const [editShop, setEditShop] = useState(null);
+  const [cafes, setCafes] = useState([]);
+  const [filteredCafes, setFilteredCafes] = useState([]);
+  const [showCafes, setShowCafes] = useState(false);
+  const [editCafe, setEditCafe] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [updatedData, setUpdatedData] = useState({ name: '', address: '', contact: '' });
   const [isAdmin, setIsAdmin] = useState(false);
   const [username, setUsername] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState({ totalCafes: 0, avgSpeed: 0, happyCustomers: 0 });
+  
   const navigate = useNavigate();
+  const { success, error: showError, info } = useNotification();
 
   // Check authentication on component mount
   useEffect(() => {
@@ -23,135 +37,242 @@ function HomePage() {
       return;
     }
     
-    // Check if the user is an admin
     const isAdminAuth = localStorage.getItem('isAdminAuthenticated');
     setIsAdmin(isAdminAuth === 'true');
     
-    // Get username from localStorage
     const storedEmail = localStorage.getItem('userEmail');
     const storedUsername = localStorage.getItem('username');
     setUsername(storedUsername || storedEmail?.split('@')[0] || 'User');
+
+    // Generate some stats for display
+    setStats({
+      totalCafes: Math.floor(Math.random() * 50) + 25,
+      avgSpeed: Math.floor(Math.random() * 5) + 1,
+      happyCustomers: Math.floor(Math.random() * 1000) + 500
+    });
   }, [navigate]);
 
-  // Fetch Shops
-  const fetchFakeShops = async () => {
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URI}/api/cafes`);
-      setFakeShops(response.data);
-      setShowShops(true);
-    } catch (error) {
-      console.error('Error fetching fake shops:', error);
-      alert('Failed to fetch shops. Please try again.');
-    }
-  };
-
-  // Toggle Shops Display
-  const toggleShopsDisplay = () => {
-    if (!showShops) {
-      // If currently hidden, fetch latest data and show
-      fetchFakeShops();
+  // Filter cafes based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredCafes(cafes);
     } else {
-      // If currently shown, just hide
-      setShowShops(false);
+      const filtered = cafes.filter(cafe => 
+        cafe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cafe.address.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredCafes(filtered);
+    }
+  }, [cafes, searchTerm]);
+
+  // Fetch cafes
+  const fetchCafes = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URI}/api/cafes`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
+      setCafes(response.data || []);
+      setShowCafes(true);
+      setStats(prev => ({
+        ...prev,
+        totalCafes: response.data?.length || 0
+      }));
+      
+      info(`Found ${response.data?.length || 0} coffee shops`, 'Cafes Loaded');
+    } catch (error) {
+      console.error('Error fetching cafes:', error);
+      
+      // Fallback to demo data if API fails
+      const demoData = [
+        { _id: '1', name: 'Slow Brew Coffee', address: '123 Lazy Lane', contact: '5551234567' },
+        { _id: '2', name: 'Turtle Espresso', address: '456 Snail Street', contact: '5555678901' },
+        { _id: '3', name: 'Dial-Up Internet Cafe', address: '789 Buffer Road', contact: '5559012345' }
+      ];
+      
+      setCafes(demoData);
+      setShowCafes(true);
+      setStats(prev => ({
+        ...prev,
+        totalCafes: demoData.length
+      }));
+      
+      info('Using demo data - API connection failed', 'Demo Mode');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle Update Function - Only for admins
-  const updateCafe = async () => {
+  // Toggle cafes display
+  const toggleCafesDisplay = () => {
+    if (!showCafes) {
+      fetchCafes();
+    } else {
+      setShowCafes(false);
+      setSearchTerm('');
+    }
+  };
+
+  // Handle edit cafe
+  const handleEditCafe = (cafe) => {
     if (!isAdmin) {
-      alert('You need administrator privileges to update shops');
+      showError('You need administrator privileges to edit coffee shops', 'Access Denied');
+      return;
+    }
+    setEditCafe(cafe);
+    setUpdatedData({ 
+      name: cafe.name, 
+      address: cafe.address, 
+      contact: cafe.contact 
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Update cafe
+  const updateCafe = async () => {
+    if (!editCafe) return;
+    
+    // Validation
+    if (!updatedData.name?.trim()) {
+      showError('Coffee shop name is required', 'Validation Error');
+      return;
+    }
+    if (!updatedData.address?.trim()) {
+      showError('Address is required', 'Validation Error');
+      return;
+    }
+    if (!updatedData.contact?.trim()) {
+      showError('Contact number is required', 'Validation Error');
       return;
     }
     
+    setIsLoading(true);
     try {
-      await axios.put(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { 
-        _id: editShop._id, 
+      const response = await axios.put(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { 
+        _id: editCafe._id, 
         ...updatedData 
       }, {
-        headers: isAdmin ? { 
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}` 
-        } : {}
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
       });
       
-      alert('Cafe updated successfully!');
-      setEditShop(null); // Close the modal
+      success('Coffee shop updated successfully!', 'Success');
+      setIsEditModalOpen(false);
+      setEditCafe(null);
+      setUpdatedData({ name: '', address: '', contact: '' });
       
-      // Refresh the shop list if shops are currently being displayed
-      if (showShops) {
-        fetchFakeShops();
+      // Update local state immediately for better UX
+      setCafes(prevCafes => 
+        prevCafes.map(cafe => 
+          cafe._id === editCafe._id 
+            ? { ...cafe, ...updatedData }
+            : cafe
+        )
+      );
+      
+      // Refresh from server to ensure consistency
+      if (showCafes) {
+        fetchCafes();
       }
     } catch (error) {
       console.error('Error updating cafe:', error);
-      alert('Failed to update cafe. Please try again.');
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to update coffee shop. Please try again.';
+      
+      if (error.response?.status === 401) {
+        showError('Session expired. Please log in again.', 'Authentication Error');
+        handleLogout();
+      } else if (error.response?.status === 403) {
+        showError('You do not have permission to update coffee shops.', 'Access Denied');
+      } else {
+        showError(errorMessage, 'Update Failed');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Delete Shop Function - Only for admins
-  const deleteCafe = async (id) => {
+  // Delete cafe
+  const deleteCafe = async (id, name) => {
     if (!isAdmin) {
-      alert('You need administrator privileges to delete shops');
+      showError('You need administrator privileges to delete coffee shops', 'Access Denied');
       return;
     }
     
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${name}"?\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    setIsLoading(true);
     try {
       await axios.delete(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { 
         data: { _id: id },
         headers: { 
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}` 
-        }
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
       });
       
-      alert('Cafe deleted successfully!');
-      setFakeShops(fakeShops.filter(shop => shop._id !== id));
+      success(`"${name}" has been removed successfully!`, 'Deleted');
+      
+      // Update local state immediately
+      setCafes(prevCafes => prevCafes.filter(cafe => cafe._id !== id));
+      setStats(prev => ({
+        ...prev,
+        totalCafes: Math.max(0, prev.totalCafes - 1)
+      }));
+      
     } catch (error) {
       console.error('Error deleting cafe:', error);
-      alert('Failed to delete cafe. Please try again.');
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to delete coffee shop. Please try again.';
+      
+      if (error.response?.status === 401) {
+        showError('Session expired. Please log in again.', 'Authentication Error');
+        handleLogout();
+      } else if (error.response?.status === 403) {
+        showError('You do not have permission to delete coffee shops.', 'Access Denied');
+      } else if (error.response?.status === 404) {
+        showError('Coffee shop not found. It may have already been deleted.', 'Not Found');
+        // Remove from local state anyway
+        setCafes(prevCafes => prevCafes.filter(cafe => cafe._id !== id));
+      } else {
+        showError(errorMessage, 'Delete Failed');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle Logout
+  // Handle logout
   const handleLogout = () => {
-    // Clear authentication data from localStorage
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userData');
     localStorage.removeItem('authToken');
     localStorage.removeItem('username');
-    
-    // Also clear admin authentication if it exists
     localStorage.removeItem('isAdminAuthenticated');
     localStorage.removeItem('adminName');
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminTimestamp');
     
-    // Navigate to login page with replace to prevent back navigation
     navigate('/login', { replace: true });
-  };
-
-  // Animation variants
-  const fadeIn = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.8 } }
-  };
-
-  const slideUp = {
-    hidden: { y: 60, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1,
-      transition: { 
-        type: "spring", 
-        stiffness: 100, 
-        damping: 15,
-        delay: 0.2
-      } 
-    }
-  };
-
-  const shopCardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
   };
 
   const getCurrentDate = () => {
@@ -166,356 +287,431 @@ function HomePage() {
 
   return (
     <>
-      {/* Header with Navbar */}
-      <div className="fixed top-0 w-full bg-white shadow-md z-40 px-4 py-3">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Snail className="w-6 h-6 text-blue-500" />
-            <span className="font-bold text-xl">Slowest Café WiFi</span>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            {isAdmin && (
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link 
-                  to="/admin-dashboard" 
-                  className="flex items-center text-purple-600 font-medium hover:text-purple-800 transition-colors"
-                >
-                  <Shield className="w-4 h-4 mr-1" />
-                  Admin Panel
-                </Link>
-              </motion.div>
-            )}
-            
-            <div className="border-l pl-4 hidden md:flex items-center gap-2">
-              <div className="text-right">
-                <p className="font-medium">{username || 'User'}</p>
-                <p className="text-xs text-gray-500">{getCurrentDate()}</p>
-              </div>
-            </div>
-            
-            <motion.button 
-              onClick={handleLogout} 
-              className="flex items-center bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition duration-300"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+      {/* Header */}
+      <header className="fixed top-0 w-full bg-white/95 backdrop-blur-md shadow-sm border-b z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <motion.div 
+              className="flex items-center gap-3"
+              whileHover={{ scale: 1.02 }}
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </motion.button>
+              <div className="w-8 h-8 bg-gradient-to-br from-coffee-500 to-orange-600 rounded-lg flex items-center justify-center">
+                <Coffee className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-xl text-gray-900">Slowest Café WiFi</span>
+            </motion.div>
+            
+            <div className="flex items-center gap-4">
+              {isAdmin && (
+                <Button
+                  as={Link}
+                  to="/admin-dashboard"
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  Admin Panel
+                </Button>
+              )}
+              
+              <div className="hidden md:flex items-center gap-3 border-l pl-4">
+                <div className="text-right">
+                  <p className="font-medium text-sm text-gray-900">{username}</p>
+                  <p className="text-xs text-gray-500">{getCurrentDate()}</p>
+                </div>
+              </div>
+              
+              <Button
+                onClick={handleLogout}
+                variant="destructive"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Hero Section */}
-      <div className="h-screen bg-cover bg-center relative overflow-hidden" style={{ backgroundImage: `url(${BackgroundImage})` }}>
-        <motion.div 
-          className="absolute inset-0 bg-black bg-opacity-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.5 }}
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-4">
+      <section className="relative h-screen bg-cover bg-center overflow-hidden" style={{ backgroundImage: `url(${BackgroundImage})` }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-coffee-900/40 to-orange-900/60" />
+        
+        <div className="relative h-full flex flex-col items-center justify-center text-white px-4">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 260, 
-              damping: 20, 
-              delay: 0.3 
-            }}
+            className="text-center max-w-4xl mx-auto"
+            initial="hidden"
+            animate="visible"
+            variants={animations.container}
           >
-            <Snail className="w-16 h-16 mb-6" />
             <motion.div 
-              animate={{ 
-                scale: [1, 1.05, 1],
-                opacity: [0.9, 1, 0.9],
-              }} 
-              transition={{ 
-                repeat: Infinity, 
-                duration: 3, 
-                ease: "easeInOut" 
-              }}
-              className="absolute -inset-4 -z-10 opacity-30"
+              className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-coffee-500 to-orange-600 rounded-full mb-8"
+              variants={animations.fadeIn}
+              whileHover={{ scale: 1.1, rotate: 5 }}
             >
-              {/* Glow effect */}
+              <Coffee className="w-10 h-10 text-white" />
+            </motion.div>
+            
+            <motion.h1 
+              className="text-5xl md:text-7xl font-bold mb-6"
+              variants={animations.slideUp}
+            >
+              The Slowest Café WiFi
+            </motion.h1>
+            
+            <motion.p 
+              className="text-xl md:text-2xl mb-8 text-gray-200"
+              variants={animations.slideUp}
+            >
+              Where connections between people matter more than internet connections
+            </motion.p>
+
+            {/* Stats Row */}
+            <motion.div 
+              className="grid grid-cols-3 gap-4 max-w-md mx-auto mb-8"
+              variants={animations.slideUp}
+            >
+              <div className="text-center">
+                <div className="text-2xl font-bold text-coffee-300">{stats.totalCafes}+</div>
+                <div className="text-sm text-gray-300">Cafes</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-coffee-300">{stats.avgSpeed}MB/s</div>
+                <div className="text-sm text-gray-300">Avg Speed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-coffee-300">{stats.happyCustomers}+</div>
+                <div className="text-sm text-gray-300">Happy Customers</div>
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+              variants={animations.slideUp}
+            >
+              <Button
+                onClick={toggleCafesDisplay}
+                variant="coffee"
+                size="lg"
+                loading={isLoading}
+                className="flex items-center gap-2"
+              >
+                <MapPin className="w-5 h-5" />
+                {showCafes ? "Hide Locations" : "Find Our Locations"}
+              </Button>
+              
+              {isAdmin && (
+                <Button
+                  as={Link}
+                  to="/add-shop"
+                  variant="outline"
+                  size="lg"
+                  className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Coffee Shop
+                </Button>
+              )}
             </motion.div>
           </motion.div>
-          
-          <motion.h1 
-            className="text-5xl md:text-7xl font-bold mb-4 text-center"
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-          >
-            The Slowest Café WiFi
-          </motion.h1>
-          
-          <motion.p 
-            className="text-xl md:text-2xl text-center max-w-2xl mb-8"
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-          >
-            Where connections between people matter more than internet connections
-          </motion.p>
-          
-          {isAdmin && (
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-            >
-              <Link to="/add-shop">
-                <motion.button 
-                  className="mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-300"
-                  whileHover={{ scale: 1.05, boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.2)" }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Add Shop
-                </motion.button>
-              </Link>
-            </motion.div>
-          )}
         </div>
-        
-        {/* Background animation effects */}
-        <motion.div 
-          className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black to-transparent opacity-40"
-          initial={{ y: 50 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 1.5, delay: 1 }}
-        />
-      </div>
+      </section>
 
       {/* Features Section */}
-      <div className="pt-28 pb-20 px-4 md:px-8 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
-          <motion.h2 
-            className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-coffee-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="text-center mb-16"
+            initial="hidden"
+            whileInView="visible"
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            variants={animations.slideUp}
           >
-            Why Choose Our Slow WiFi?
-          </motion.h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Why Choose Our Slow WiFi?
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Experience the art of digital minimalism in our carefully curated slow-internet environments
+            </p>
+          </motion.div>
           
           <motion.div 
             className="grid md:grid-cols-3 gap-8"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ staggerChildren: 0.2 }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1 }
-            }}
+            variants={animations.container}
           >
-            <motion.div variants={slideUp}>
-              <FeatureCard icon={<Clock />} title="Time to Think" description="Pages load so slowly, you'll have time to write your next novel between clicks" />
+            <motion.div variants={animations.slideUp}>
+              <FeatureCard 
+                icon={<Clock className="w-8 h-8" />} 
+                title="Time to Think" 
+                description="Pages load so slowly, you'll have time to write your next novel between clicks" 
+              />
             </motion.div>
-            <motion.div variants={slideUp}>
-              <FeatureCard icon={<Users />} title="Real Conversations" description="When streaming fails, people start talking to each other" />
+            <motion.div variants={animations.slideUp}>
+              <FeatureCard 
+                icon={<Users className="w-8 h-8" />} 
+                title="Real Conversations" 
+                description="When streaming fails, people start talking to each other" 
+              />
             </motion.div>
-            <motion.div variants={slideUp}>
-              <FeatureCard icon={<Coffee />} title="Better Coffee" description="Our WiFi is slow because we put all our energy into making perfect coffee" />
+            <motion.div variants={animations.slideUp}>
+              <FeatureCard 
+                icon={<Coffee className="w-8 h-8" />} 
+                title="Better Coffee" 
+                description="Our WiFi is slow because we put all our energy into making perfect coffee" 
+              />
             </motion.div>
           </motion.div>
         </div>
-      </div>
+      </section>
 
-      {/* CTA Section */}
-      <div className="bg-[#2A2922] text-white py-16 px-4">
-        <motion.div 
-          className="max-w-4xl mx-auto text-center"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeIn}
-        >
-          <motion.h2 
-            className="text-3xl md:text-4xl font-bold mb-6"
-            variants={slideUp}
+      {/* Cafes Section */}
+      <AnimatePresence>
+        {showCafes && (
+          <motion.section 
+            className="py-20 bg-white"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            Ready to Slow Down?
-          </motion.h2>
-          
-          <motion.p 
-            className="text-lg mb-8"
-            variants={slideUp}
-          >
-            Join us for the world's most relaxing internet experience
-          </motion.p>
-          
-          <motion.button 
-            className="bg-[#D4A373] hover:bg-[#C29365] text-white font-bold py-3 px-8 rounded-full transition duration-300"
-            onClick={toggleShopsDisplay}
-            whileHover={{ scale: 1.05, boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.2)" }}
-            whileTap={{ scale: 0.95 }}
-            variants={slideUp}
-          >
-            {showShops ? "Hide Shops" : "Find Our Locations"}
-          </motion.button>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 sm:mb-0">
+                  Our Coffee Shop Locations
+                </h2>
+                
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="text"
+                    placeholder="Search cafes..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    icon={Search}
+                    className="w-64"
+                  />
+                  {isAdmin && (
+                    <Button
+                      as={Link}
+                      to="/add-shop"
+                      variant="coffee"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Shop
+                    </Button>
+                  )}
+                </div>
+              </div>
 
-          <AnimatePresence>
-            {showShops && (
-              <motion.div 
-                className="mt-8"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ 
-                  duration: 0.5,
-                  opacity: { duration: 0.3 }
-                }}
-              >
-                {fakeShops.length > 0 ? (
-                  <motion.div layout>
-                    {fakeShops.map((shop, index) => (
-                      <motion.div 
-                        key={shop._id} 
-                        className="bg-white p-6 rounded-lg shadow-md mb-4 overflow-hidden"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                        variants={shopCardVariants}
-                      >
-                        <h3 className="text-xl font-bold mb-2 text-gray-800">{shop.name}</h3>
-                        <p className="text-gray-600">📍 {shop.address}</p>
-                        <p className="text-gray-600">📞 {shop.contact}</p>
+              {filteredCafes.length > 0 ? (
+                <motion.div 
+                  className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  layout
+                >
+                  {filteredCafes.map((cafe, index) => (
+                    <motion.div
+                      key={cafe._id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className="p-6 h-full">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 bg-gradient-to-br from-coffee-500 to-orange-600 rounded-lg flex items-center justify-center">
+                              <Coffee className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{cafe.name}</h3>
+                              <div className="flex items-center gap-1 text-sm text-amber-600">
+                                <Star className="w-3 h-3 fill-current" />
+                                <span>Slow WiFi Certified</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <MapPin className="w-4 h-4" />
+                            <span className="text-sm">{cafe.address}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Phone className="w-4 h-4" />
+                            <span className="text-sm">{cafe.contact}</span>
+                          </div>
+                        </div>
                         
                         {isAdmin && (
-                          <div className="mt-4 flex gap-4">
-                            <motion.button
-                              onClick={() => {
-                                setEditShop(shop);
-                                setUpdatedData({ 
-                                  name: shop.name, 
-                                  address: shop.address, 
-                                  contact: shop.contact 
-                                });
-                              }}
-                              className="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                          <div className="flex gap-2 pt-4 border-t">
+                            <Button
+                              onClick={() => handleEditCafe(cafe)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1 flex-1"
                             >
+                              <Edit className="w-3 h-3" />
                               Edit
-                            </motion.button>
-                            <motion.button
-                              onClick={() => deleteCafe(shop._id)}
-                              className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                            </Button>
+                            <Button
+                              onClick={() => deleteCafe(cafe._id, cafe.name)}
+                              variant="destructive"
+                              size="sm"
+                              className="flex items-center gap-1"
                             >
-                              Delete
-                            </motion.button>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                           </div>
                         )}
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                ) : (
-                  <motion.p 
-                    className="text-gray-400"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    No shops available. Click the button to load.
-                  </motion.p>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </div>
-
-      {/* Edit Modal - Only shown to admins */}
-      <AnimatePresence>
-        {editShop && isAdmin && (
-          <motion.div 
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div 
-              className="bg-white p-6 rounded-lg shadow-lg w-96"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            >
-              <h2 className="text-xl font-bold mb-4">Edit Cafe</h2>
-              <input
-                type="text"
-                value={updatedData.name}
-                onChange={(e) => setUpdatedData({ ...updatedData, name: e.target.value })}
-                className="w-full border p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Cafe Name"
-              />
-              <input
-                type="text"
-                value={updatedData.address}
-                onChange={(e) => setUpdatedData({ ...updatedData, address: e.target.value })}
-                className="w-full border p-2 mb-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Address"
-              />
-              <input
-                type="text"
-                value={updatedData.contact}
-                onChange={(e) => setUpdatedData({ ...updatedData, contact: e.target.value })}
-                className="w-full border p-2 mb-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Contact"
-              />
-              <div className="flex justify-end">
-                <motion.button 
-                  className="bg-gray-400 text-white px-4 py-2 rounded mr-2"
-                  onClick={() => setEditShop(null)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Cancel
-                </motion.button>
-                <motion.button 
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                  onClick={updateCafe}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Update
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : (
+                <Card className="p-12 text-center">
+                  <Coffee className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {searchTerm ? 'No matching cafes found' : 'No cafes available'}
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    {searchTerm 
+                      ? 'Try adjusting your search terms' 
+                      : 'Be the first to add a coffee shop to our network'
+                    }
+                  </p>
+                  {!searchTerm && isAdmin && (
+                    <Button
+                      as={Link}
+                      to="/add-shop"
+                      variant="coffee"
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add First Coffee Shop
+                    </Button>
+                  )}
+                </Card>
+              )}
+            </div>
+          </motion.section>
         )}
       </AnimatePresence>
-      
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-br from-coffee-900 via-coffee-800 to-orange-900 text-white">
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={animations.slideUp}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Ready to Slow Down?
+            </h2>
+            <p className="text-lg mb-8 text-coffee-100">
+              Join us for the world's most relaxing internet experience
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={toggleCafesDisplay}
+                variant="outline"
+                size="lg"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                {showCafes ? "Hide Locations" : "Explore Locations"}
+              </Button>
+              <Button
+                as={Link}
+                to="/speed-test"
+                variant="secondary"
+                size="lg"
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="w-5 h-5" />
+                Test Your Speed
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Coffee Shop"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Coffee Shop Name"
+            type="text"
+            value={updatedData.name}
+            onChange={(e) => setUpdatedData({ ...updatedData, name: e.target.value })}
+            placeholder="e.g., Slow Brew Café"
+          />
+          <Input
+            label="Address"
+            type="text"
+            value={updatedData.address}
+            onChange={(e) => setUpdatedData({ ...updatedData, address: e.target.value })}
+            placeholder="e.g., 123 Main Street, City, State"
+          />
+          <Input
+            label="Contact Number"
+            type="text"
+            value={updatedData.contact}
+            onChange={(e) => setUpdatedData({ ...updatedData, contact: e.target.value })}
+            placeholder="e.g., (555) 123-4567"
+          />
+          
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              onClick={() => setIsEditModalOpen(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={updateCafe}
+              variant="coffee"
+              loading={isLoading}
+            >
+              Update Coffee Shop
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Admin Access Quick Link */}
       {!isAdmin && (
         <motion.div 
-          className="fixed bottom-4 right-4"
+          className="fixed bottom-6 right-6 z-40"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1 }}
         >
-          <Link to="/admin-login">
-            <motion.button 
-              className="flex items-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm py-2 px-3 rounded-full shadow-md"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Shield size={14} />
-              <span>Admin Access</span>
-              <ExternalLink size={12} />
-            </motion.button>
-          </Link>
+          <Button
+            as={Link}
+            to="/admin-login"
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-2 bg-white shadow-lg border"
+          >
+            <Shield className="w-4 h-4" />
+            Admin Access
+            <ExternalLink className="w-3 h-3" />
+          </Button>
         </motion.div>
       )}
     </>

@@ -169,37 +169,49 @@ function AdminDashboard() {
     setError(null);
     
     try {
-      // For demo/development, let's use simple mock data to ensure functionality
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URI}/api/cafes`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
+      setCafes(response.data || []);
+      setResponseData(response.data || []);
+      
+      // Update admin stats
+      setAdminStats({
+        totalCafes: response.data?.length || 0,
+        totalUsers: 24, // Demo value
+        activeUsers: 8  // Demo value
+      });
+      
+    } catch (err) {
+      console.error('Error fetching cafes:', err);
+      
+      // Fallback to demo data if API fails
       const demoData = [
         { _id: '1', name: 'Slow Brew Coffee', address: '123 Lazy Lane', contact: '555-1234' },
         { _id: '2', name: 'Turtle Espresso', address: '456 Snail Street', contact: '555-5678' },
         { _id: '3', name: 'Dial-Up Internet Cafe', address: '789 Buffer Road', contact: '555-9012' }
       ];
-
-      // Try API call, but use demo data if it fails
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URI}/api/cafes`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-          }
-        });
-        setCafes(response.data);
-        setResponseData(response.data)
-        // console.log(response.data)
-      } catch (err) {
-        console.warn('API call failed, using demo data', err);
-        setCafes(demoData);
-      }
-
-      // Set demo stats
+      
+      setCafes(demoData);
+      setResponseData(demoData);
+      
       setAdminStats({
-        totalCafes: responseData.length,
+        totalCafes: demoData.length,
         totalUsers: 24,
         activeUsers: 8
       });
-    } catch (err) {
-      console.error("Error in fetchData:", err);
-      setError("Failed to load cafe data. Please try again.");
+      
+      if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+        setTimeout(() => navigate('/admin-login'), 2000);
+      } else {
+        setError('Using demo data - API connection failed');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -218,61 +230,103 @@ function AdminDashboard() {
   };
 
   // This is the function we'll pass as onSave
-  const handleSaveCafe = (cafeData) => {
+  const handleSaveCafe = async (cafeData) => {
     console.log("handleSaveCafe called with data:", cafeData);
     
     try {
+      setIsLoading(true);
+      
       // If we're editing an existing cafe
       if (editCafe) {
-        // Try to do an API call, but handle offline mode
         try {
-          axios.put(
+          await axios.put(
             `${import.meta.env.VITE_BASE_URI}/api/cafes`, 
             { _id: editCafe._id, ...cafeData },
             {
               headers: {
-                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-              }
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+              },
+              withCredentials: true
             }
           );
+          
+          // Update the state after successful API call
+          setCafes(prevCafes => 
+            prevCafes.map(cafe => 
+              cafe._id === editCafe._id 
+                ? { ...cafe, ...cafeData } 
+                : cafe
+            )
+          );
+          
+          alert('Cafe updated successfully!');
         } catch (apiError) {
-          console.warn('API update failed, updating in frontend only', apiError);
+          console.error('API update failed:', apiError);
+          
+          if (apiError.response?.status === 401) {
+            alert('Session expired. Please log in again.');
+            navigate('/admin-login');
+            return;
+          } else if (apiError.response?.status === 403) {
+            alert('You do not have permission to update cafes.');
+            return;
+          } else {
+            // Update in frontend only as fallback
+            setCafes(prevCafes => 
+              prevCafes.map(cafe => 
+                cafe._id === editCafe._id 
+                  ? { ...cafe, ...cafeData } 
+                  : cafe
+              )
+            );
+            alert('Cafe updated locally (API unavailable)');
+          }
         }
-        
-        // Update the state regardless of API result
-        setCafes(prevCafes => 
-          prevCafes.map(cafe => 
-            cafe._id === editCafe._id 
-              ? { ...cafe, ...cafeData } 
-              : cafe
-          )
-        );
-        
-        alert('Cafe updated successfully!');
       } else {
         // Adding a new cafe
-        // Generate a temporary ID for new cafe
-        const newId = 'temp_' + Date.now();
-        const newCafe = { _id: newId, ...cafeData };
-        
-        // Try to do an API call, but handle offline mode
         try {
-          axios.post(
+          const response = await axios.post(
             `${import.meta.env.VITE_BASE_URI}/api/cafes`, 
             cafeData,
             {
               headers: {
-                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-              }
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+              },
+              withCredentials: true
             }
           );
+          
+          // Add the new cafe with the server-generated ID
+          const newCafe = response.data;
+          setCafes(prevCafes => [...prevCafes, newCafe]);
+          
+          // Update stats
+          setAdminStats(prev => ({
+            ...prev,
+            totalCafes: prev.totalCafes + 1
+          }));
+          
+          alert('New cafe added successfully!');
         } catch (apiError) {
-          console.warn('API create failed, adding in frontend only', apiError);
+          console.error('API create failed:', apiError);
+          
+          if (apiError.response?.status === 401) {
+            alert('Session expired. Please log in again.');
+            navigate('/admin-login');
+            return;
+          } else if (apiError.response?.status === 403) {
+            alert('You do not have permission to add cafes.');
+            return;
+          } else {
+            // Add in frontend only as fallback
+            const newId = 'temp_' + Date.now();
+            const newCafe = { _id: newId, ...cafeData };
+            setCafes(prevCafes => [...prevCafes, newCafe]);
+            alert('Cafe added locally (API unavailable)');
+          }
         }
-        
-        // Update the state regardless of API result
-        setCafes(prevCafes => [...prevCafes, newCafe]);
-        alert('New cafe added successfully!');
       }
       
       // Close modal and reset edit state
@@ -281,33 +335,57 @@ function AdminDashboard() {
     } catch (error) {
       console.error('Error in handleSaveCafe:', error);
       alert('Failed to save cafe. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDeleteCafe = (id) => {
+  const handleDeleteCafe = async (id) => {
     if (!window.confirm('Are you sure you want to delete this cafe?')) {
       return;
     }
     
     try {
-      // Try to do an API call, but handle offline mode
-      try {
-        axios.delete(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { 
-          data: { _id: id },
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-          }
-        });
-      } catch (apiError) {
-        console.warn('API delete failed, removing in frontend only', apiError);
-      }
+      setIsLoading(true);
       
-      // Update state regardless of API result
-      setCafes(cafes.filter(cafe => cafe._id !== id));
+      await axios.delete(`${import.meta.env.VITE_BASE_URI}/api/cafes`, { 
+        data: { _id: id },
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
+      // Update state after successful deletion
+      setCafes(prevCafes => prevCafes.filter(cafe => cafe._id !== id));
+      
+      // Update stats
+      setAdminStats(prev => ({
+        ...prev,
+        totalCafes: Math.max(0, prev.totalCafes - 1)
+      }));
+      
       alert('Cafe deleted successfully!');
-    } catch (error) {
-      console.error('Error in handleDeleteCafe:', error);
-      alert('Failed to delete cafe. Please try again.');
+    } catch (apiError) {
+      console.error('Error deleting cafe:', apiError);
+      
+      if (apiError.response?.status === 401) {
+        alert('Session expired. Please log in again.');
+        navigate('/admin-login');
+      } else if (apiError.response?.status === 403) {
+        alert('You do not have permission to delete cafes.');
+      } else if (apiError.response?.status === 404) {
+        alert('Cafe not found. It may have already been deleted.');
+        // Remove from local state anyway
+        setCafes(prevCafes => prevCafes.filter(cafe => cafe._id !== id));
+      } else {
+        // Remove from frontend only as fallback
+        setCafes(prevCafes => prevCafes.filter(cafe => cafe._id !== id));
+        alert('Cafe deleted locally (API unavailable)');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
